@@ -87,6 +87,7 @@
         .modal-close { width: 32px; height: 32px; border-radius: 8px; border: none; background: #f1f5f9; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
         .modal-close:hover { background: #e2e8f0; }
         .modal-body { padding: 24px; overflow-y: auto; max-height: calc(90vh - 140px); }
+        .modal-footer { padding: 16px 24px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; background: #f8fafc; }
         .modal-metrics { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; margin-bottom: 20px; }
         .modal-metric { background: #f8fafc; border-radius: 8px; padding: 12px 8px; text-align: center; }
         .modal-metric-value { font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
@@ -219,7 +220,6 @@
                     </div>
                     <div class="filter-actions">
                         <button class="btn btn-secondary" id="resetFilters">Сбросить</button>
-                        <button class="btn btn-primary" id="applyFilters">Применить</button>
                     </div>
                 </div>
             </div>
@@ -310,8 +310,8 @@
                         <div class="modal-filter-group">
                             <select class="modal-filter-select" id="filterTimeDeviation">
                                 <option value="">Без отклонения</option>
-                                <option value="over">Превышение на 50%</option>
-                                <option value="under">Скорость на 50%</option>
+                                <option value="over">Отклонение больше 50%</option>
+                                <option value="under">Отклонение меньше 50%</option>
                             </select>
                         </div>
                         <div class="modal-filter-actions">
@@ -581,10 +581,116 @@
         function exportData(type, format) {
             let headers, rows, filename;
             if (type === 'main') {
-                const f = filterUnits();
-                headers = ['Название учебной единицы', 'Фабрика', 'Направление', 'Популярность'];
-                rows = f.map(u => [u.name, u.factory, u.direction, u.popularity + ' запусков']);
-                filename = `аналитика_${format}.${format}`;
+                const filteredUnits = filterUnits();
+                headers = [
+                    'Название учебной единицы',
+                    'Фабрика',
+                    'Направление',
+                    'Категория',
+                    'Тема',
+                    'Длительность',
+                    'Описание',
+                    'Популярность',
+                    'Начальник управления',
+                    'Начальник отдела',
+                    'Руководитель группы',
+                    'ФИО сотрудника',
+                    'User',
+                    'Дата начала',
+                    'Дата завершения',
+                    'Время прохождения',
+                    'Статус',
+                    'Балл',
+                    'Номер попытки'
+                ];
+                
+                rows = [];
+                filteredUnits.forEach(u => {
+                    sampleEmployees.forEach(e => {
+                        const attemptsCount = e.attempts > 0 ? e.attempts : 1;
+                        for (let attempt = 1; attempt <= attemptsCount; attempt++) {
+                            rows.push([
+                                u.name,
+                                u.factory,
+                                u.direction,
+                                u.category,
+                                u.theme,
+                                u.duration,
+                                u.description,
+                                u.popularity + ' запусков',
+                                e.deptHead,
+                                e.deptManager,
+                                e.groupLead,
+                                e.name,
+                                e.user,
+                                e.startDate,
+                                e.endDate,
+                                e.time,
+                                e.status === 'assigned' ? 'Назначен' : e.status === 'progress' ? 'В процессе' : 'Завершён',
+                                e.score,
+                                attemptsCount > 1 ? attempt : (e.attempts === 0 ? '-' : attempt)
+                            ]);
+                        }
+                    });
+                });
+                
+                filename = `аналитика_полный_отчёт_${new Date().toISOString().split('T')[0]}.${format}`;
+            } else if (type === 'unit') {
+                const currentUnit = sampleUnits.find(u => u.id === currentUnitId);
+                const unitName = currentUnit ? currentUnit.name : 'учебная_единица';
+                headers = [
+                    'Название учебной единицы',
+                    'Фабрика',
+                    'Направление',
+                    'Категория',
+                    'Тема',
+                    'Длительность',
+                    'Описание',
+                    'Начальник управления',
+                    'Начальник отдела',
+                    'Руководитель группы',
+                    'ФИО сотрудника',
+                    'User',
+                    'Дата начала',
+                    'Дата завершения',
+                    'Время прохождения',
+                    'Статус',
+                    'Балл',
+                    'Номер попытки'
+                ];
+                
+                rows = [];
+                console.log('Export unit:', currentUnitId, currentUnit);
+                console.log('Employees count:', sampleEmployees.length);
+                sampleEmployees.forEach(e => {
+                    const attemptsCount = e.attempts > 0 ? e.attempts : 1;
+                    console.log(`Employee ${e.name}: attempts=${e.attempts}, will create ${attemptsCount} rows`);
+                    for (let attempt = 1; attempt <= attemptsCount; attempt++) {
+                        rows.push([
+                            currentUnit ? currentUnit.name : '-',
+                            currentUnit ? currentUnit.factory : '-',
+                            currentUnit ? currentUnit.direction : '-',
+                            currentUnit ? currentUnit.category : '-',
+                            currentUnit ? currentUnit.theme : '-',
+                            currentUnit ? currentUnit.duration : '-',
+                            currentUnit ? currentUnit.description : '-',
+                            e.deptHead,
+                            e.deptManager,
+                            e.groupLead,
+                            e.name,
+                            e.user,
+                            e.startDate,
+                            e.endDate,
+                            e.time,
+                            e.status === 'assigned' ? 'Назначен' : e.status === 'progress' ? 'В процессе' : 'Завершён',
+                            e.score,
+                            attempt
+                        ]);
+                    }
+                });
+                console.log('Total rows to export:', rows.length);
+                
+                filename = `${unitName.replace(/[^a-zA-Zа-яА-Я0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.${format}`;
             } else {
                 headers = ['Начальник управления', 'Начальник отдела', 'Руководитель группы', 'ФИО', 'Дата начала', 'Дата завершения', 'Время прохождения', 'Статус', 'Балл', 'Количество попыток'];
                 rows = sampleEmployees.map(e => [e.deptHead, e.deptManager, e.groupLead, e.name, e.startDate, e.endDate, e.time, e.status === 'assigned' ? 'Назначен' : e.status === 'progress' ? 'В процессе' : 'Завершён', e.score, e.attempts]);
@@ -612,6 +718,7 @@
             document.querySelectorAll('.quick-date-btn').forEach(x => x.classList.remove('active')); 
             b.classList.add('active'); 
             filters.period = b.dataset.period; 
+            renderResults(); 
         });
 
         document.getElementById('factoryFilter').onchange = e => { 
@@ -619,14 +726,28 @@
             filters.direction = ''; 
             updateDirectionOptions(e.target.value); 
             document.getElementById('directionFilter').value = ''; 
-        };
-
-        document.getElementById('applyFilters').onclick = () => { 
-            filters.search = document.getElementById('searchUnit').value; 
-            filters.dateFrom = document.getElementById('dateFrom').value; 
-            filters.dateTo = document.getElementById('dateTo').value; 
             renderResults(); 
         };
+
+        document.getElementById('directionFilter').onchange = e => { 
+            filters.direction = e.target.value; 
+            renderResults(); 
+        };
+
+        document.getElementById('searchUnit').addEventListener('input', e => { 
+            filters.search = e.target.value; 
+            renderResults(); 
+        });
+
+        document.getElementById('dateFrom').addEventListener('change', e => { 
+            filters.dateFrom = e.target.value; 
+            renderResults(); 
+        });
+
+        document.getElementById('dateTo').addEventListener('change', e => { 
+            filters.dateTo = e.target.value; 
+            renderResults(); 
+        });
 
         document.getElementById('resetFilters').onclick = () => { 
             filters = { period: 'month', dateFrom: '', dateTo: '', search: '', factory: '', direction: '', sortByPopularity: false }; 
@@ -659,26 +780,26 @@
         document.getElementById('exportXlsx').onclick = () => exportData('main', 'xlsx');
         document.getElementById('exportCsv').onclick = () => exportData('main', 'csv');
 
-        document.getElementById('exportUnitBtn').onclick = e => { 
+        document.getElementById('exportUnitBtn').onclick = function(e) { 
             e.stopPropagation(); 
             e.preventDefault();
             const menu = document.getElementById('unitExportMenu');
             menu.classList.toggle('visible');
-            console.log('Export menu toggled:', menu.classList.contains('visible'));
-            document.getElementById('exportMenu').classList.remove('visible'); 
+            document.getElementById('exportMenu').classList.remove('visible');
+            return false;
         };
 
-        document.getElementById('exportUnitXlsx').onclick = (e) => { 
+        document.getElementById('exportUnitXlsx').onclick = function(e) { 
             e.stopPropagation();
             e.preventDefault();
-            console.log('Exporting unit to XLSX');
-            exportData('unit', 'xlsx'); 
+            exportData('unit', 'xlsx');
+            return false;
         };
-        document.getElementById('exportUnitCsv').onclick = (e) => { 
+        document.getElementById('exportUnitCsv').onclick = function(e) { 
             e.stopPropagation();
             e.preventDefault();
-            console.log('Exporting unit to CSV');
-            exportData('unit', 'csv'); 
+            exportData('unit', 'csv');
+            return false;
         };
 
         document.addEventListener('click', (e) => { 
@@ -687,8 +808,10 @@
                 e.target.closest('#exportMenu') || e.target.closest('#unitExportMenu')) {
                 return;
             }
-            document.getElementById('exportMenu').classList.remove('visible'); 
-            document.getElementById('unitExportMenu').classList.remove('visible'); 
+            setTimeout(() => {
+                document.getElementById('exportMenu').classList.remove('visible'); 
+                document.getElementById('unitExportMenu').classList.remove('visible'); 
+            }, 0);
         });
 
         // Фильтры сотрудников
