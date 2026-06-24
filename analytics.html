@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Ментор - Аналитика</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; display: flex; min-height: 100vh; }
+
+        .sidebar { width: 260px; background: #1a1f36; color: #fff; padding: 24px 16px; display: flex; flex-direction: column; height: 100vh; position: fixed; left: 0; top: 0; }
+        .sidebar-header { padding: 0 8px 24px; border-bottom: 1px solid #2d3748; margin-bottom: 24px; }
+        .sidebar-header h1 { font-size: 18px; font-weight: 600; }
+        .nav-section { margin-bottom: 24px; }
+        .nav-section-title { font-size: 11px; text-transform: uppercase; color: #718096; padding: 0 8px; margin-bottom: 8px; letter-spacing: 0.5px; }
+        .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; cursor: pointer; transition: background 0.2s; color: #a0aec0; text-decoration: none; margin-bottom: 4px; }
+        .nav-item:hover { background: #2d3748; color: #fff; }
+        .nav-item.active { background: #4a5568; color: #fff; }
+        .nav-item.hidden { display: none; }
+        .nav-item svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+        .main-wrapper { flex: 1; margin-left: 260px; display: flex; flex-direction: column; min-height: 100vh; }
+        .top-bar { background: #fff; padding: 16px 32px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        .page-title { font-size: 20px; font-weight: 600; color: #1a202c; }
+        .top-bar-actions { display: flex; gap: 12px; }
+        .btn { padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; display: flex; align-items: center; gap: 8px; transition: all 0.2s; }
+        .btn-primary { background: #4f46e5; color: #fff; }
+        .btn-primary:hover { background: #4338ca; }
+        .btn-secondary { background: #fff; color: #374151; border: 1px solid #d1d5db; }
+        .btn-secondary:hover { background: #f3f4f6; }
+        .btn svg { width: 16px; height: 16px; }
+
+        .main-content { flex: 1; padding: 24px 32px; overflow-y: auto; }
+
+        .filter-panel { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .filter-row { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
+        .filter-group { display: flex; flex-direction: column; gap: 6px; }
+        .filter-label { font-size: 12px; font-weight: 500; color: #64748b; }
+        .filter-input, .filter-select { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; min-width: 180px; background: #fff; }
+        .filter-input:focus, .filter-select:focus { outline: none; border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
+        .date-range { display: flex; align-items: center; gap: 8px; }
+        .date-input { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; width: 140px; }
+        .date-separator { color: #94a3b8; }
+        .quick-dates { display: flex; gap: 8px; margin-bottom: 12px; }
+        .quick-date-btn { padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+        .quick-date-btn:hover { background: #f3f4f6; }
+        .quick-date-btn.active { background: #4f46e5; color: #fff; border-color: #4f46e5; }
+
+        .status-filters { display: flex; gap: 8px; }
+        .status-checkbox { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; user-select: none; }
+        .status-checkbox:hover { background: #f3f4f6; }
+        .status-checkbox.active { background: #eef2ff; border-color: #4f46e5; color: #4f46e5; }
+        .status-checkbox input { display: none; }
+        .filter-actions { display: flex; gap: 8px; margin-left: auto; }
+
+        .results-table-container { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); overflow: hidden; }
+        .results-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #e2e8f0; }
+        .results-count { font-size: 14px; color: #64748b; }
+        .sort-button { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; font-size: 13px; cursor: pointer; }
+        .sort-button:hover { background: #f3f4f6; }
+        .sort-button.active { background: #eef2ff; border-color: #4f46e5; color: #4f46e5; }
+
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 12px 20px; font-size: 12px; font-weight: 600; color: #64748b; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+        td { padding: 14px 20px; font-size: 14px; color: #334155; border-bottom: 1px solid #f1f5f9; }
+        tr:hover { background: #f8fafc; cursor: pointer; }
+        .link-cell { color: #4f46e5; font-weight: 500; cursor: pointer; }
+        .link-cell:hover { text-decoration: underline; }
+
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; }
+        .badge-assigned { background: #fef3c7; color: #b45309; }
+        .badge-progress { background: #dbeafe; color: #1d4ed8; }
+        .badge-completed { background: #d1fae5; color: #047857; }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: #64748b; display: none; }
+        .empty-state.visible { display: block; }
+        .empty-state svg { width: 64px; height: 64px; margin-bottom: 16px; color: #cbd5e1; }
+        .empty-state h3 { font-size: 16px; color: #334155; margin-bottom: 8px; }
+        .empty-state p { font-size: 14px; }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; visibility: hidden; transition: all 0.2s; }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal { background: #fff; border-radius: 16px; width: 95%; max-width: 1400px; max-height: 90vh; overflow: hidden; transform: scale(0.95); transition: transform 0.2s; }
+        .modal-overlay.active .modal { transform: scale(1); }
+        .modal-header { padding: 20px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+        .modal-title { font-size: 18px; font-weight: 600; color: #1e293b; }
+        .modal-close { width: 32px; height: 32px; border-radius: 8px; border: none; background: #f1f5f9; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
+        .modal-close:hover { background: #e2e8f0; }
+        .modal-body { padding: 24px; overflow-y: auto; max-height: calc(90vh - 140px); }
+        .modal-metrics { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; margin-bottom: 20px; }
+        .modal-metric { background: #f8fafc; border-radius: 8px; padding: 12px 8px; text-align: center; }
+        .modal-metric-value { font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
+        .modal-metric-label { font-size: 10px; color: #64748b; }
+        .detail-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+        .detail-item { display: flex; flex-direction: column; gap: 4px; }
+        .detail-item.full-width { grid-column: span 4; }
+        .detail-label { font-size: 11px; color: #64748b; }
+        .detail-value { font-size: 13px; font-weight: 500; color: #1e293b; }
+
+        .employees-toggle { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #f8fafc; border-radius: 8px; cursor: pointer; margin-bottom: 16px; transition: background 0.2s; }
+        .employees-toggle:hover { background: #f1f5f9; }
+        .employees-toggle svg { transition: transform 0.2s; }
+        .employees-toggle.open svg { transform: rotate(180deg); }
+        .collapsible-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+        .collapsible-content.open { max-height: 1000px; }
+
+        .employees-table-wrapper { overflow-x: auto; margin: 0 -24px; padding: 0 24px; }
+        .employees-table { width: 100%; min-width: 1200px; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+        .employees-table th { padding: 10px 8px; font-size: 11px; background: #f1f5f9; text-align: left; white-space: nowrap; border-bottom: 2px solid #e2e8f0; font-weight: 600; color: #475569; }
+        .employees-table td { padding: 8px; border-bottom: 1px solid #f1f5f9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .employees-table th:nth-child(1), .employees-table td:nth-child(1) { width: 14%; }
+        .employees-table th:nth-child(2), .employees-table td:nth-child(2) { width: 13%; }
+        .employees-table th:nth-child(3), .employees-table td:nth-child(3) { width: 12%; }
+        .employees-table th:nth-child(4), .employees-table td:nth-child(4) { width: 14%; }
+        .employees-table th:nth-child(5), .employees-table td:nth-child(5) { width: 7%; }
+        .employees-table th:nth-child(6), .employees-table td:nth-child(6) { width: 8%; }
+        .employees-table th:nth-child(7), .employees-table td:nth-child(7) { width: 8%; }
+        .employees-table th:nth-child(8), .employees-table td:nth-child(8) { width: 7%; }
+        .employees-table th:nth-child(9), .employees-table td:nth-child(9) { width: 6%; }
+        .employees-table th:nth-child(10), .employees-table td:nth-child(10) { width: 5%; }
+        .employees-table th:nth-child(11), .employees-table td:nth-child(11) { width: 6%; }
+        .employees-table tr:hover td { background: #f8fafc; }
+        .employees-table .dept-row td { background: #f1f5f9; font-weight: 600; color: #1e293b; border-top: 2px solid #d1d5db; }
+        .employees-table .dept-row td:first-child { border-left: 3px solid #4f46e5; }
+        .employees-table .subgroup-row { background: #fafbfc; }
+        .employees-table .subgroup-row td:first-child { border-left: 16px solid #e2e8f0; }
+        .employees-table .subgroup-row:hover td { background: #f1f5f9; }
+        .employees-table .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+        .employees-table .time-deviation { background: #fee2e2; color: #dc2626; }
+
+        .modal-filters { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; padding: 12px; background: #f8fafc; border-radius: 8px; margin-bottom: 16px; }
+        .modal-filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .modal-filter-input, .modal-filter-select { padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; background: #fff; min-width: 140px; }
+        .modal-filter-input:focus, .modal-filter-select:focus { outline: none; border-color: #4f46e5; }
+        .modal-filter-actions { margin-left: auto; }
+
+        .filters-summary { display: none; flex-wrap: wrap; gap: 8px; padding: 12px 20px; background: #f0fdf4; border-top: 1px solid #d1fae5; }
+        .filters-summary.visible { display: flex; }
+        .filter-tag { display: flex; align-items: center; gap: 6px; padding: 4px 10px; background: #fff; border: 1px solid #d1fae5; border-radius: 16px; font-size: 12px; }
+        .filter-tag button { border: none; background: none; cursor: pointer; color: #64748b; padding: 0; display: flex; }
+        .clear-filters-btn { color: #dc2626; font-size: 12px; cursor: pointer; background: none; border: none; text-decoration: underline; margin-left: 12px; }
+
+        .export-dropdown { position: relative; }
+        .export-menu { position: absolute; top: 100%; right: 0; margin-top: 4px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 150px; display: none; z-index: 10; }
+        .export-menu.visible { display: block; }
+        .export-menu button { width: 100%; padding: 10px 16px; text-align: left; background: none; border: none; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+        .export-menu button:hover { background: #f8fafc; }
+
+        .modal-metric.progress-highlight .modal-metric-value { color: #10b981; }
+        .modal-metric.progress-medium .modal-metric-value { color: #f59e0b; }
+        .modal-metric.progress-low .modal-metric-value { color: #ef4444; }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-header"><h1>AI-Ментор</h1></div>
+        <nav class="nav-section">
+            <a href="#" class="nav-item" id="catalogNav"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>Каталог обучения</a>
+            <a href="#" class="nav-item active" id="analyticsNav"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>Аналитика</a>
+        </nav>
+    </aside>
+
+    <div class="main-wrapper">
+        <div class="top-bar">
+            <h2 class="page-title">Аналитика</h2>
+            <div class="top-bar-actions">
+                <div class="export-dropdown">
+                    <button class="btn btn-secondary" id="exportBtn"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>Экспорт</button>
+                    <div class="export-menu" id="exportMenu">
+                        <button id="exportXlsx"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>Экспорт в .xlsx</button>
+                        <button id="exportCsv"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>Экспорт в .csv</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="filters-summary" id="filtersSummary">
+            <span style="font-size: 12px; color: #64748b;">Активные фильтры:</span>
+            <div id="activeFilters"></div>
+            <button class="clear-filters-btn" id="clearAllFilters">Сбросить все</button>
+        </div>
+
+        <main class="main-content">
+            <div class="filter-panel">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label class="filter-label">Период</label>
+                        <div class="date-range">
+                            <input type="date" class="date-input" id="dateFrom">
+                            <span class="date-separator">—</span>
+                            <input type="date" class="date-input" id="dateTo">
+                        </div>
+                        <div class="quick-dates">
+                            <button class="quick-date-btn" data-period="week">Текущая неделя</button>
+                            <button class="quick-date-btn active" data-period="month">Текущий месяц</button>
+                            <button class="quick-date-btn" data-period="quarter">Текущий квартал</button>
+                            <button class="quick-date-btn" data-period="year">Текущий год</button>
+                        </div>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Учебная единица</label>
+                        <input type="text" class="filter-input" id="searchUnit" placeholder="Поиск по названию...">
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Фабрика</label>
+                        <select class="filter-select" id="factoryFilter">
+                            <option value="">Все фабрики</option>
+                            <option value="delivery">Доставка</option>
+                            <option value="regulation">Урегулирование</option>
+                            <option value="service">Сервис</option>
+                            <option value="telemarketing">Телемаркетинг</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Направление</label>
+                        <select class="filter-select" id="directionFilter">
+                            <option value="">Все направления</option>
+                        </select>
+                    </div>
+                    <div class="filter-actions">
+                        <button class="btn btn-secondary" id="resetFilters">Сбросить</button>
+                        <button class="btn btn-primary" id="applyFilters">Применить</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="results-table-container">
+                <div class="results-header">
+                    <span class="results-count">Найдено: <strong id="resultsCount">12</strong> единиц обучения</span>
+                    <button class="sort-button" id="sortByPopularity">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                        По популярности
+                    </button>
+                </div>
+                <table id="resultsTable">
+                    <thead>
+                        <tr><th>Название учебной единицы</th><th>Фабрика</th><th>Направление</th><th>Популярность</th></tr>
+                    </thead>
+                    <tbody id="resultsBody"></tbody>
+                </table>
+                <div class="empty-state" id="emptyState">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <h3>Ничего не найдено</h3>
+                    <p>Попробуйте изменить параметры поиска и фильтры</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">Название учебной единицы</h3>
+                <button class="modal-close" id="closeModal"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-metrics">
+                    <div class="modal-metric"><div class="modal-metric-value" id="modalAvgTime">24:35</div><div class="modal-metric-label">Среднее время</div></div>
+                    <div class="modal-metric"><div class="modal-metric-value" id="modalAssigned">12</div><div class="modal-metric-label">Назначено</div></div>
+                    <div class="modal-metric"><div class="modal-metric-value" id="modalProgress">5</div><div class="modal-metric-label">В процессе</div></div>
+                    <div class="modal-metric"><div class="modal-metric-value" id="modalCompleted">8</div><div class="modal-metric-label">Завершено</div></div>
+                    <div class="modal-metric"><div class="modal-metric-value" id="modalAvgScore">82.5</div><div class="modal-metric-label">Средний балл</div></div>
+                    <div class="modal-metric"><div class="modal-metric-value" id="modalAvgAttempts">1.6</div><div class="modal-metric-label">Ср. попыток</div></div>
+                    <div class="modal-metric"><div class="modal-metric-value" id="modalProgressPercent">65%</div><div class="modal-metric-label">Прошли</div></div>
+                </div>
+                <div class="detail-grid" id="detailInfo"></div>
+                <div class="employees-toggle" id="employeesToggle">
+                    <span>Список сотрудников</span>
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+                <div class="collapsible-content" id="employeesList">
+                    <div class="modal-filters">
+                        <div class="modal-filter-group">
+                            <input type="text" class="modal-filter-input" id="filterEmpName" placeholder="Поиск по ФИО...">
+                        </div>
+                        <div class="modal-filter-group">
+                            <select class="modal-filter-select" id="filterEmpStatus">
+                                <option value="">Все статусы</option>
+                                <option value="assigned">Назначен</option>
+                                <option value="progress">В процессе</option>
+                                <option value="completed">Завершён</option>
+                                <option value="cancelled">Отменён</option>
+                            </select>
+                        </div>
+                        <div class="modal-filter-group">
+                            <select class="modal-filter-select" id="filterEmpDeptHead">
+                                <option value="">Все управления</option>
+                                <option value="Волков Андрей Михайлович">Волков А.М.</option>
+                                <option value="Морозова Наталья Ивановна">Морозова Н.И.</option>
+                            </select>
+                        </div>
+                        <div class="modal-filter-group">
+                            <select class="modal-filter-select" id="filterEmpDeptManager">
+                                <option value="">Все отделы</option>
+                                <option value="Кузнецова Елена Викторовна">Кузнецова Е.В.</option>
+                                <option value="Осипов Сергей Александрович">Осипов С.А.</option>
+                                <option value="Соколов Игорь Владимирович">Соколов И.В.</option>
+                                <option value="Попов Алексей Николаевич">Попов А.Н.</option>
+                            </select>
+                        </div>
+                        <div class="modal-filter-group">
+                            <select class="modal-filter-select" id="filterEmpGroupLead">
+                                <option value="">Все группы</option>
+                                <option value="Белов Дмитрий Сергеевич">Белов Д.С.</option>
+                                <option value="Лебедева Анна Петровна">Лебедева А.П.</option>
+                                <option value="Новикова Ольга Дмитриевна">Новикова О.Д.</option>
+                                <option value="Козлов Михаил Андреевич">Козлов М.А.</option>
+                            </select>
+                        </div>
+                        <div class="modal-filter-group">
+                            <select class="modal-filter-select" id="filterTimeDeviation">
+                                <option value="">Без отклонения</option>
+                                <option value="over">Превышение на 50%</option>
+                                <option value="under">Скорость на 50%</option>
+                            </select>
+                        </div>
+                        <div class="modal-filter-actions">
+                            <button class="btn btn-secondary" id="resetModalFilters" style="padding: 6px 12px; font-size: 12px;">Сбросить</button>
+                        </div>
+                    </div>
+                    <div class="employees-table-wrapper">
+                        <table class="employees-table">
+                            <thead><tr><th>Начальник управления</th><th>Начальник отдела</th><th>Руководитель группы</th><th>ФИО</th><th>Дата начала</th><th>Дата завершения</th><th>Время прох.</th><th>Статус</th><th>Балл</th><th>Попыток</th></tr></thead>
+                            <tbody id="employeesTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="export-dropdown">
+                    <button class="btn btn-secondary" id="exportUnitBtn"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>Экспорт</button>
+                    <div class="export-menu" id="unitExportMenu">
+                        <button id="exportUnitXlsx"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>Экспорт в .xlsx</button>
+                        <button id="exportUnitCsv"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>Экспорт в .csv</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const directionsByFactory = {
+            delivery: ['Малый и микро бизнес', 'Розничный бизнес', 'Универсал', 'Партнёрка'],
+            regulation: ['90-', '90+', 'Выездное'],
+            service: ['ФЛ Chat', 'ФЛ Voice', 'ЮЛ Chat', 'ЮЛ Voice', 'СвА', 'Эквайринг'],
+            telemarketing: ['Физ.лица', 'Юр.лица']
+        };
+
+        const factoryNames = { delivery: 'Доставка', regulation: 'Урегулирование', service: 'Сервис', telemarketing: 'Телемаркетинг' };
+
+        const sampleUnits = [
+            { id: 1, name: 'Основы работы с клиентами', factoryKey: 'service', factory: 'Сервис', direction: 'ФЛ Chat', category: 'Базовый курс', theme: 'Коммуникации', duration: '45 мин', description: 'Курс по основам эффективного общения с клиентами', popularity: 245, avgTime: '28:15', avgScore: 82, avgAttempts: 1.4, assigned: 15, progress: 8, completed: 22 },
+            { id: 2, name: 'Продажа банковских продуктов', factoryKey: 'delivery', factory: 'Доставка', direction: 'Малый и микро бизнес', category: 'Продажи', theme: 'Банковские продукты', duration: '60 мин', description: 'Обучение техникам продаж банковских продуктов', popularity: 198, avgTime: '35:40', avgScore: 75, avgAttempts: 2.1, assigned: 12, progress: 6, completed: 18 },
+            { id: 3, name: 'Урегулирование конфликтов', factoryKey: 'regulation', factory: 'Урегулирование', direction: '90+', category: 'Soft Skills', theme: 'Конфликтология', duration: '30 мин', description: 'Методы работы со сложными клиентами', popularity: 176, avgTime: '22:30', avgScore: 88, avgAttempts: 1.2, assigned: 8, progress: 4, completed: 14 },
+            { id: 4, name: 'Эквайринг: основы', factoryKey: 'service', factory: 'Сервис', direction: 'Эквайринг', category: 'Технический курс', theme: 'Платежи', duration: '40 мин', description: 'Базовые знания по эквайрингу', popularity: 156, avgTime: '32:10', avgScore: 79, avgAttempts: 1.8, assigned: 10, progress: 5, completed: 12 },
+            { id: 5, name: 'Работа с возражениями', factoryKey: 'telemarketing', factory: 'Телемаркетинг', direction: 'Юр.лица', category: 'Продажи', theme: 'Работа с возражениями', duration: '35 мин', description: 'Техники работы с возражениями клиентов', popularity: 134, avgTime: '26:45', avgScore: 84, avgAttempts: 1.5, assigned: 6, progress: 3, completed: 10 },
+            { id: 6, name: 'Оформление документов', factoryKey: 'delivery', factory: 'Доставка', direction: 'Розничный бизнес', category: 'Документооборот', theme: 'Документы', duration: '50 мин', description: 'Правила оформления банковской документации', popularity: 112, avgTime: '38:20', avgScore: 71, avgAttempts: 2.3, assigned: 5, progress: 2, completed: 8 },
+            { id: 7, name: 'Выездное обслуживание', factoryKey: 'regulation', factory: 'Урегулирование', direction: 'Выездное', category: 'Практика', theme: 'Выездное обслуживание', duration: '55 мин', description: 'Особенности выездного обслуживания клиентов', popularity: 98, avgTime: '42:15', avgScore: 76, avgAttempts: 1.9, assigned: 4, progress: 2, completed: 7 },
+            { id: 8, name: 'Консультирование юрлиц', factoryKey: 'service', factory: 'Сервис', direction: 'ЮЛ Voice', category: 'Консультации', theme: 'Юридические лица', duration: '45 мин', description: 'Особенности консультирования юридических лиц', popularity: 87, avgTime: '30:50', avgScore: 81, avgAttempts: 1.6, assigned: 3, progress: 2, completed: 6 },
+            { id: 9, name: 'Активные продажи', factoryKey: 'telemarketing', factory: 'Телемаркетинг', direction: 'Физ.лица', category: 'Продажи', theme: 'Активные продажи', duration: '40 мин', description: 'Техники активных продаж по телефону', popularity: 76, avgTime: '24:30', avgScore: 85, avgAttempts: 1.3, assigned: 2, progress: 1, completed: 5 },
+            { id: 10, name: 'Кредитные продукты', factoryKey: 'delivery', factory: 'Доставка', direction: 'Универсал', category: 'Продукты', theme: 'Кредитование', duration: '60 мин', description: 'Обзор кредитных продуктов банка', popularity: 65, avgTime: '45:10', avgScore: 72, avgAttempts: 2.2, assigned: 2, progress: 1, completed: 4 },
+            { id: 11, name: 'Работа в системе СвА', factoryKey: 'service', factory: 'Сервис', direction: 'СвА', category: 'Системы', theme: 'СвА', duration: '30 мин', description: 'Обучение работе в системе СвА', popularity: 54, avgTime: '20:15', avgScore: 90, avgAttempts: 1.1, assigned: 1, progress: 1, completed: 3 },
+            { id: 12, name: 'Молодежные продукты', factoryKey: 'delivery', factory: 'Доставка', direction: 'Партнёрка', category: 'Продукты', theme: 'Молодежь', duration: '35 мин', description: 'Продукты для молодых клиентов', popularity: 43, avgTime: '18:40', avgScore: 86, avgAttempts: 1.2, assigned: 1, progress: 1, completed: 2 }
+        ];
+
+        const sampleEmployees = [
+            { deptHead: 'Волков Андрей Михайлович', deptManager: 'Кузнецова Елена Викторовна', groupLead: 'Белов Дмитрий Сергеевич', name: 'Иванов Иван Иванович', user: 'U_123456', startDate: '2024-01-15', endDate: '2024-01-16', time: '42:30', status: 'completed', score: 85, attempts: 1 },
+            { deptHead: 'Волков Андрей Михайлович', deptManager: 'Кузнецова Елена Викторовна', groupLead: 'Белов Дмитрий Сергеевич', name: 'Петрова Мария Сергеевна', user: 'U_234567', startDate: '2024-01-18', endDate: '-', time: '28:15', status: 'progress', score: '-', attempts: 1 },
+            { deptHead: 'Волков Андрей Михайлович', deptManager: 'Осипов Сергей Александрович', groupLead: 'Лебедева Анна Петровна', name: 'Сидоров Алексей Петрович', user: 'U_345678', startDate: '2024-01-10', endDate: '2024-01-12', time: '55:00', status: 'completed', score: 92, attempts: 2 },
+            { deptHead: 'Волков Андрей Михайлович', deptManager: 'Осипов Сергей Александрович', groupLead: 'Лебедева Анна Петровна', name: 'Козлова Анна Николаевна', user: 'U_456789', startDate: '2024-01-20', endDate: '-', time: '-', status: 'assigned', score: '-', attempts: 0 },
+            { deptHead: 'Морозова Наталья Ивановна', deptManager: 'Соколов Игорь Владимирович', groupLead: 'Новикова Ольга Дмитриевна', name: 'Михайлов Дмитрий Владимирович', user: 'U_567890', startDate: '2024-01-08', endDate: '2024-01-09', time: '38:45', status: 'completed', score: 78, attempts: 1 },
+            { deptHead: 'Морозова Наталья Ивановна', deptManager: 'Соколов Игорь Владимирович', groupLead: 'Новикова Ольга Дмитриевна', name: 'Федорова Елена Александровна', user: 'U_678901', startDate: '2024-01-05', endDate: '2024-01-07', time: '48:20', status: 'completed', score: 88, attempts: 1 },
+            { deptHead: 'Морозова Наталья Ивановна', deptManager: 'Попов Алексей Николаевич', groupLead: 'Козлов Михаил Андреевич', name: 'Андреев Сергей Николаевич', user: 'U_789012', startDate: '2024-01-22', endDate: '-', time: '15:10', status: 'progress', score: '-', attempts: 1 },
+            { deptHead: 'Морозова Наталья Ивановна', deptManager: 'Попов Алексей Николаевич', groupLead: 'Козлов Михаил Андреевич', name: 'Смирнова Ольга Викторовна', user: 'U_890123', startDate: '2024-01-03', endDate: '2024-01-04', time: '35:50', status: 'completed', score: 81, attempts: 2 }
+        ];
+
+        let filters = { period: 'month', dateFrom: '', dateTo: '', search: '', factory: '', direction: '', sortByPopularity: false };
+        let currentUnitId = null;
+        const stateKey = 'analyticsState';
+
+        function getStoredState() { try { return JSON.parse(localStorage.getItem(stateKey)); } catch { return null; } }
+        function saveState() { localStorage.setItem(stateKey, JSON.stringify(filters)); }
+        function restoreState() { const s = getStoredState(); if (s) { filters = { ...filters, ...s }; applyFiltersToUI(); } }
+
+        function applyFiltersToUI() {
+            document.querySelectorAll('.quick-date-btn').forEach(b => b.classList.toggle('active', b.dataset.period === filters.period));
+            document.getElementById('searchUnit').value = filters.search;
+            document.getElementById('factoryFilter').value = filters.factory;
+            if (filters.factory) updateDirectionOptions(filters.factory);
+            document.getElementById('directionFilter').value = filters.direction;
+            document.getElementById('dateFrom').value = filters.dateFrom;
+            document.getElementById('dateTo').value = filters.dateTo;
+            document.getElementById('sortByPopularity').classList.toggle('active', filters.sortByPopularity);
+        }
+
+        function updateDirectionOptions(factory) {
+            const sel = document.getElementById('directionFilter');
+            sel.innerHTML = '<option value="">Все направления</option>';
+            if (factory && directionsByFactory[factory]) {
+                directionsByFactory[factory].forEach(d => { const o = document.createElement('option'); o.value = d; o.textContent = d; sel.appendChild(o); });
+            }
+        }
+
+        function filterUnits() {
+            let f = [...sampleUnits];
+            if (filters.search) { const s = filters.search.toLowerCase(); f = f.filter(u => u.name.toLowerCase().includes(s)); }
+            if (filters.factory) f = f.filter(u => u.factoryKey === filters.factory);
+            if (filters.direction) f = f.filter(u => u.direction === filters.direction);
+            if (filters.sortByPopularity) f.sort((a, b) => b.popularity - a.popularity);
+            return f;
+        }
+
+        function renderResults() {
+            const f = filterUnits();
+            const tbody = document.getElementById('resultsBody');
+            document.getElementById('resultsCount').textContent = f.length;
+
+            if (f.length === 0) {
+                document.getElementById('resultsTable').style.display = 'none';
+                document.getElementById('emptyState').classList.add('visible');
+            } else {
+                document.getElementById('resultsTable').style.display = 'table';
+                document.getElementById('emptyState').classList.remove('visible');
+                tbody.innerHTML = f.map(u => `<tr><td><span class="link-cell" data-id="${u.id}">${u.name}</span></td><td>${u.factory}</td><td>${u.direction}</td><td>${u.popularity} запусков</td></tr>`).join('');
+                tbody.querySelectorAll('.link-cell').forEach(l => {
+                    l.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        console.log('Opening modal for unit id:', this.dataset.id);
+                        openUnitDetail(parseInt(this.dataset.id));
+                    });
+                });
+            }
+            updateFiltersSummary();
+            saveState();
+        }
+
+        function updateFiltersSummary() {
+            const summary = document.getElementById('filtersSummary');
+            const active = document.getElementById('activeFilters');
+            const tags = [];
+            if (filters.search) tags.push({ label: `Поиск: "${filters.search}"`, type: 'search' });
+            if (filters.factory) tags.push({ label: `Фабрика: ${factoryNames[filters.factory]}`, type: 'factory' });
+            if (filters.direction) tags.push({ label: `Направление: ${filters.direction}`, type: 'direction' });
+            if (filters.period) { const p = { week: 'Неделя', month: 'Месяц', quarter: 'Квартал', year: 'Год' }; tags.push({ label: `Период: ${p[filters.period]}`, type: 'period' }); }
+            if (filters.sortByPopularity) tags.push({ label: 'По популярности', type: 'sort' });
+
+            if (tags.length) {
+                summary.classList.add('visible');
+                active.innerHTML = tags.map(t => `<div class="filter-tag">${t.label}<button data-type="${t.type}"><svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>`).join('');
+                active.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+                    const t = b.dataset.type;
+                    if (t === 'search') filters.search = '';
+                    if (t === 'factory') { filters.factory = ''; filters.direction = ''; updateDirectionOptions(''); }
+                    if (t === 'direction') filters.direction = '';
+                    if (t === 'period') filters.period = 'month';
+                    if (t === 'sort') filters.sortByPopularity = false;
+                    applyFiltersToUI();
+                    renderResults();
+                }));
+            } else { summary.classList.remove('visible'); }
+        }
+
+        function openUnitDetail(id) {
+            console.log('Attempting to open modal for unit id:', id);
+            currentUnitId = id;
+            const u = sampleUnits.find(x => x.id === id);
+            if (!u) {
+                console.log('Unit not found');
+                return;
+            }
+            console.log('Found unit:', u.name);
+
+            document.getElementById('modalTitle').textContent = u.name;
+            document.getElementById('modalAvgTime').textContent = u.avgTime;
+            document.getElementById('modalAssigned').textContent = u.assigned;
+            document.getElementById('modalProgress').textContent = u.progress;
+            document.getElementById('modalCompleted').textContent = u.completed;
+            document.getElementById('modalAvgScore').textContent = u.avgScore;
+            document.getElementById('modalAvgAttempts').textContent = u.avgAttempts;
+            const total = u.assigned + u.progress + u.completed;
+            const progressPercent = total > 0 ? Math.round((u.completed / total) * 100) : 0;
+            document.getElementById('modalProgressPercent').textContent = progressPercent + '%';
+            const percentEl = document.getElementById('modalProgressPercent').parentElement;
+            percentEl.classList.remove('progress-highlight', 'progress-medium', 'progress-low');
+            if (progressPercent >= 70) percentEl.classList.add('progress-highlight');
+            else if (progressPercent >= 40) percentEl.classList.add('progress-medium');
+            else percentEl.classList.add('progress-low');
+
+            document.getElementById('detailInfo').innerHTML = `
+                <div class="detail-item"><span class="detail-label">Фабрика</span><span class="detail-value">${u.factory}</span></div>
+                <div class="detail-item"><span class="detail-label">Направление</span><span class="detail-value">${u.direction}</span></div>
+                <div class="detail-item"><span class="detail-label">Категория</span><span class="detail-value">${u.category}</span></div>
+                <div class="detail-item"><span class="detail-label">Тема</span><span class="detail-value">${u.theme}</span></div>
+                <div class="detail-item"><span class="detail-label">Длительность</span><span class="detail-value">${u.duration}</span></div>
+                <div class="detail-item"><span class="detail-label">Популярность</span><span class="detail-value">${u.popularity} запусков</span></div>
+                <div class="detail-item full-width"><span class="detail-label">Описание</span><span class="detail-value">${u.description}</span></div>
+            `;
+
+            renderEmployeesTable(sampleEmployees);
+
+            document.getElementById('employeesList').classList.remove('open');
+            document.getElementById('employeesToggle').classList.remove('open');
+            document.getElementById('filterEmpName').value = '';
+            document.getElementById('filterEmpStatus').value = '';
+            document.getElementById('filterEmpDeptHead').value = '';
+            document.getElementById('filterEmpDeptManager').value = '';
+            document.getElementById('filterEmpGroupLead').value = '';
+            document.getElementById('filterTimeDeviation').value = '';
+            console.log('About to show modal');
+            document.getElementById('detailModal').classList.add('active');
+        }
+
+        function renderEmployeesTable(employees) {
+            console.log('Rendering employees table');
+            const filtered = employees.filter(e => {
+                const nameFilter = document.getElementById('filterEmpName').value.toLowerCase();
+                const statusFilter = document.getElementById('filterEmpStatus').value;
+                const deptHeadFilter = document.getElementById('filterEmpDeptHead').value;
+                const deptManagerFilter = document.getElementById('filterEmpDeptManager').value;
+                const groupLeadFilter = document.getElementById('filterEmpGroupLead').value;
+                const timeDeviationFilter = document.getElementById('filterTimeDeviation').value;
+
+                if (nameFilter && !e.name.toLowerCase().includes(nameFilter)) return false;
+                if (statusFilter && e.status !== statusFilter) return false;
+                if (deptHeadFilter && e.deptHead !== deptHeadFilter) return false;
+                if (deptManagerFilter && e.deptManager !== deptManagerFilter) return false;
+                if (groupLeadFilter && e.groupLead !== groupLeadFilter) return false;
+                
+                // Фильтрация по отклонению времени
+                if (timeDeviationFilter && e.time !== '-' && e.time !== '') {
+                    const [minutes, seconds] = e.time.split(':').map(Number);
+                    const actualSeconds = minutes * 60 + seconds;
+                    // Заявленное время 45 минут (2700 секунд) для примера
+                    const declaredSeconds = 2700;
+                    const deviation = Math.abs(actualSeconds - declaredSeconds) / declaredSeconds;
+                    
+                    if (timeDeviationFilter === 'over' && deviation <= 0.5) return false;
+                    if (timeDeviationFilter === 'under' && deviation >= 0.5) return false;
+                }
+                
+                return true;
+            });
+
+            const groupedEmployees = {};
+            filtered.forEach(e => {
+                const key = `${e.deptHead}|${e.deptManager}|${e.groupLead}`;
+                if (!groupedEmployees[key]) {
+                    groupedEmployees[key] = { ...e, employees: [] };
+                }
+                groupedEmployees[key].employees.push(e);
+            });
+
+            document.getElementById('employeesTableBody').innerHTML = Object.values(groupedEmployees).map(g => {
+                return `
+                    <tr class="dept-row">
+                        <td>${g.deptHead}</td>
+                        <td>${g.deptManager}</td>
+                        <td>${g.groupLead}</td>
+                        <td colspan="8"><strong>${g.employees.length} сотрудник(ов)</strong></td>
+                    </tr>
+                    ${g.employees.map(e => {
+                        const empStatus = e.status === 'assigned' ? 'Назначен' : e.status === 'progress' ? 'В процессе' : e.status === 'completed' ? 'Завершён' : 'Отменён';
+                        // Проверка отклонения времени прохождения на 50% от заявленного
+                        let timeClass = '';
+                        if (e.time !== '-' && e.time !== '') {
+                            const [minutes, seconds] = e.time.split(':').map(Number);
+                            const actualSeconds = minutes * 60 + seconds;
+                            // Для примера предположим, что заявленное время 45 минут (2700 секунд)
+                            const declaredSeconds = 2700;
+                            const deviation = Math.abs(actualSeconds - declaredSeconds) / declaredSeconds;
+                            if (deviation > 0.5) {
+                                timeClass = ' time-deviation';
+                            }
+                        }
+                        return `<tr class="subgroup-row"><td></td><td></td><td></td><td>${e.name}</td><td>${e.startDate}</td><td>${e.endDate}</td><td class="${timeClass}">${e.time}</td><td><span class="badge badge-${e.status}">${empStatus}</span></td><td>${e.score}</td><td>${e.attempts}</td></tr>`;
+                    }).join('')}
+                `;
+            }).join('');
+        }
+
+        function exportData(type, format) {
+            let headers, rows, filename;
+            if (type === 'main') {
+                const f = filterUnits();
+                headers = ['Название учебной единицы', 'Фабрика', 'Направление', 'Популярность'];
+                rows = f.map(u => [u.name, u.factory, u.direction, u.popularity + ' запусков']);
+                filename = `аналитика_${format}.${format}`;
+            } else {
+                headers = ['Начальник управления', 'Начальник отдела', 'Руководитель группы', 'ФИО', 'Дата начала', 'Дата завершения', 'Время прохождения', 'Статус', 'Балл', 'Количество попыток'];
+                rows = sampleEmployees.map(e => [e.deptHead, e.deptManager, e.groupLead, e.name, e.startDate, e.endDate, e.time, e.status === 'assigned' ? 'Назначен' : e.status === 'progress' ? 'В процессе' : 'Завершён', e.score, e.attempts]);
+                filename = `сотрудники_${format}.${format}`;
+            }
+
+            if (format === 'csv') {
+                let csv = headers.join(';') + '\n';
+                rows.forEach(r => csv += r.join(';') + '\n');
+                const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+            } else {
+                let xls = '<table><thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr></thead><tbody>';
+                rows.forEach(r => { xls += '<tr>' + r.map(c => `<td>${c}</td>`).join('') + '</tr>'; });
+                xls += '</tbody></table>';
+                const blob = new Blob(['\ufeff' + xls], { type: 'application/vnd.ms-excel;' });
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename.replace('.xlsx', '.xls'); a.click();
+            }
+            document.getElementById('exportMenu').classList.remove('visible');
+            document.getElementById('unitExportMenu').classList.remove('visible');
+        }
+
+        // Обработчики событий
+        document.querySelectorAll('.quick-date-btn').forEach(b => b.onclick = () => { 
+            document.querySelectorAll('.quick-date-btn').forEach(x => x.classList.remove('active')); 
+            b.classList.add('active'); 
+            filters.period = b.dataset.period; 
+        });
+
+        document.getElementById('factoryFilter').onchange = e => { 
+            filters.factory = e.target.value; 
+            filters.direction = ''; 
+            updateDirectionOptions(e.target.value); 
+            document.getElementById('directionFilter').value = ''; 
+        };
+
+        document.getElementById('applyFilters').onclick = () => { 
+            filters.search = document.getElementById('searchUnit').value; 
+            filters.dateFrom = document.getElementById('dateFrom').value; 
+            filters.dateTo = document.getElementById('dateTo').value; 
+            renderResults(); 
+        };
+
+        document.getElementById('resetFilters').onclick = () => { 
+            filters = { period: 'month', dateFrom: '', dateTo: '', search: '', factory: '', direction: '', sortByPopularity: false }; 
+            applyFiltersToUI(); 
+            renderResults(); 
+        };
+
+        document.getElementById('clearAllFilters').onclick = () => document.getElementById('resetFilters').click();
+
+        document.getElementById('sortByPopularity').onclick = () => { 
+            filters.sortByPopularity = !filters.sortByPopularity; 
+            document.getElementById('sortByPopularity').classList.toggle('active', filters.sortByPopularity); 
+            renderResults(); 
+        };
+
+        document.getElementById('closeModal').onclick = () => document.getElementById('detailModal').classList.remove('active');
+        document.getElementById('detailModal').onclick = e => { if (e.target.classList.contains('modal-overlay')) document.getElementById('detailModal').classList.remove('active'); };
+
+        document.getElementById('employeesToggle').onclick = () => { 
+            document.getElementById('employeesList').classList.toggle('open'); 
+            document.getElementById('employeesToggle').classList.toggle('open'); 
+        };
+
+        document.getElementById('exportBtn').onclick = e => { 
+            e.stopPropagation(); 
+            document.getElementById('exportMenu').classList.toggle('visible'); 
+            document.getElementById('unitExportMenu').classList.remove('visible'); 
+        };
+
+        document.getElementById('exportXlsx').onclick = () => exportData('main', 'xlsx');
+        document.getElementById('exportCsv').onclick = () => exportData('main', 'csv');
+
+        document.getElementById('exportUnitBtn').onclick = e => { 
+            e.stopPropagation(); 
+            e.preventDefault();
+            const menu = document.getElementById('unitExportMenu');
+            menu.classList.toggle('visible');
+            console.log('Export menu toggled:', menu.classList.contains('visible'));
+            document.getElementById('exportMenu').classList.remove('visible'); 
+        };
+
+        document.getElementById('exportUnitXlsx').onclick = (e) => { 
+            e.stopPropagation();
+            e.preventDefault();
+            console.log('Exporting unit to XLSX');
+            exportData('unit', 'xlsx'); 
+        };
+        document.getElementById('exportUnitCsv').onclick = (e) => { 
+            e.stopPropagation();
+            e.preventDefault();
+            console.log('Exporting unit to CSV');
+            exportData('unit', 'csv'); 
+        };
+
+        document.addEventListener('click', (e) => { 
+            // Не закрывать меню если клик был по кнопке экспорта или внутри меню
+            if (e.target.closest('#exportBtn') || e.target.closest('#exportUnitBtn') || 
+                e.target.closest('#exportMenu') || e.target.closest('#unitExportMenu')) {
+                return;
+            }
+            document.getElementById('exportMenu').classList.remove('visible'); 
+            document.getElementById('unitExportMenu').classList.remove('visible'); 
+        });
+
+        // Фильтры сотрудников
+        document.getElementById('filterEmpName').addEventListener('input', () => renderEmployeesTable(sampleEmployees));
+        document.getElementById('filterEmpStatus').addEventListener('change', () => renderEmployeesTable(sampleEmployees));
+        document.getElementById('filterEmpDeptHead').addEventListener('change', () => renderEmployeesTable(sampleEmployees));
+        document.getElementById('filterEmpDeptManager').addEventListener('change', () => renderEmployeesTable(sampleEmployees));
+        document.getElementById('filterEmpGroupLead').addEventListener('change', () => renderEmployeesTable(sampleEmployees));
+        document.getElementById('filterTimeDeviation').addEventListener('change', () => renderEmployeesTable(sampleEmployees));
+        document.getElementById('resetModalFilters').addEventListener('click', () => {
+            document.getElementById('filterEmpName').value = '';
+            document.getElementById('filterEmpStatus').value = '';
+            document.getElementById('filterEmpDeptHead').value = '';
+            document.getElementById('filterEmpDeptManager').value = '';
+            document.getElementById('filterEmpGroupLead').value = '';
+            document.getElementById('filterTimeDeviation').value = '';
+            renderEmployeesTable(sampleEmployees);
+        });
+
+        // Инициализация
+        restoreState();
+        renderResults();
+    </script>
+</body>
+</html>
