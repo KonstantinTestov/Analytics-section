@@ -142,10 +142,11 @@
         .clear-filters-btn { color: #dc2626; font-size: 12px; cursor: pointer; background: none; border: none; text-decoration: underline; margin-left: 12px; }
 
         .export-dropdown { position: relative; }
-        .export-menu { position: absolute; top: 100%; right: 0; margin-top: 4px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 150px; display: none; z-index: 10; }
+        .export-menu { position: absolute; top: 100%; right: 0; margin-top: 4px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 150px; display: none; z-index: 1000; }
         .export-menu.visible { display: block; }
         .export-menu button { width: 100%; padding: 10px 16px; text-align: left; background: none; border: none; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 8px; }
         .export-menu button:hover { background: #f8fafc; }
+        .modal-footer .export-menu { position: absolute; bottom: 100%; right: 0; margin-bottom: 8px; margin-top: 0; z-index: 1001; }
 
         .modal-metric.progress-highlight .modal-metric-value { color: #10b981; }
         .modal-metric.progress-medium .modal-metric-value { color: #f59e0b; }
