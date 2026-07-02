@@ -152,6 +152,9 @@
         .modal-metric.progress-highlight .modal-metric-value { color: #10b981; }
         .modal-metric.progress-medium .modal-metric-value { color: #f59e0b; }
         .modal-metric.progress-low .modal-metric-value { color: #ef4444; }
+        .modal-metric.metric-high .modal-metric-value { color: #ef3124; }
+        .modal-metric.metric-medium .modal-metric-value { color: #f59e0b; }
+        .modal-metric.metric-low .modal-metric-value { color: #10b981; }
     </style>
 </head>
 <body>
@@ -490,6 +493,18 @@
             document.getElementById('modalAssignedPercent').textContent = assignedPercent + '%';
             document.getElementById('modalProgressPercent').textContent = progressPercent + '%';
             document.getElementById('modalCompletedPercent').textContent = completedPercent + '%';
+            
+            const assignedPercentEl = document.getElementById('modalAssignedPercent').parentElement;
+            assignedPercentEl.classList.remove('metric-high', 'metric-medium', 'metric-low');
+            if (assignedPercent >= 40) assignedPercentEl.classList.add('metric-high');
+            else if (assignedPercent >= 20) assignedPercentEl.classList.add('metric-medium');
+            else assignedPercentEl.classList.add('metric-low');
+            
+            const progressPercentEl = document.getElementById('modalProgressPercent').parentElement;
+            progressPercentEl.classList.remove('metric-high', 'metric-medium', 'metric-low');
+            if (progressPercent >= 40) progressPercentEl.classList.add('metric-high');
+            else if (progressPercent >= 20) progressPercentEl.classList.add('metric-medium');
+            else progressPercentEl.classList.add('metric-low');
             
             const completedPercentEl = document.getElementById('modalCompletedPercent').parentElement;
             completedPercentEl.classList.remove('progress-highlight', 'progress-medium', 'progress-low');
