@@ -88,7 +88,7 @@
         .modal-close:hover { background: #e2e8f0; }
         .modal-body { padding: 24px; overflow-y: auto; max-height: calc(90vh - 140px); }
         .modal-footer { padding: 16px 24px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; background: #f8fafc; position: relative; }
-        .modal-metrics { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; margin-bottom: 20px; }
+        .modal-metrics { display: grid; grid-template-columns: repeat(9, 1fr); gap: 12px; margin-bottom: 20px; }
         .modal-metric { background: #f8fafc; border-radius: 8px; padding: 12px 8px; text-align: center; }
         .modal-metric-value { font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
         .modal-metric-label { font-size: 10px; color: #64748b; }
@@ -259,11 +259,13 @@
                 <div class="modal-metrics">
                     <div class="modal-metric"><div class="modal-metric-value" id="modalAvgTime">24:35</div><div class="modal-metric-label">Среднее время</div></div>
                     <div class="modal-metric"><div class="modal-metric-value" id="modalAssigned">12</div><div class="modal-metric-label">Назначено</div></div>
+                    <div class="modal-metric"><div class="modal-metric-value" id="modalAssignedPercent">26%</div><div class="modal-metric-label">Назначено %</div></div>
                     <div class="modal-metric"><div class="modal-metric-value" id="modalProgress">5</div><div class="modal-metric-label">В процессе</div></div>
+                    <div class="modal-metric"><div class="modal-metric-value" id="modalProgressPercent">11%</div><div class="modal-metric-label">В процессе %</div></div>
                     <div class="modal-metric"><div class="modal-metric-value" id="modalCompleted">8</div><div class="modal-metric-label">Завершено</div></div>
+                    <div class="modal-metric"><div class="modal-metric-value" id="modalCompletedPercent">63%</div><div class="modal-metric-label">Прошли %</div></div>
                     <div class="modal-metric"><div class="modal-metric-value" id="modalAvgScore">82.5</div><div class="modal-metric-label">Средний балл</div></div>
                     <div class="modal-metric"><div class="modal-metric-value" id="modalAvgAttempts">1.6</div><div class="modal-metric-label">Ср. попыток</div></div>
-                    <div class="modal-metric"><div class="modal-metric-value" id="modalProgressPercent">65%</div><div class="modal-metric-label">Прошли</div></div>
                 </div>
                 <div class="detail-grid" id="detailInfo"></div>
                 <div class="employees-toggle" id="employeesToggle">
@@ -479,14 +481,21 @@
             document.getElementById('modalCompleted').textContent = u.completed;
             document.getElementById('modalAvgScore').textContent = u.avgScore;
             document.getElementById('modalAvgAttempts').textContent = u.avgAttempts;
+            
             const total = u.assigned + u.progress + u.completed;
-            const progressPercent = total > 0 ? Math.round((u.completed / total) * 100) : 0;
+            const assignedPercent = total > 0 ? Math.round((u.assigned / total) * 100) : 0;
+            const progressPercent = total > 0 ? Math.round((u.progress / total) * 100) : 0;
+            const completedPercent = total > 0 ? Math.round((u.completed / total) * 100) : 0;
+            
+            document.getElementById('modalAssignedPercent').textContent = assignedPercent + '%';
             document.getElementById('modalProgressPercent').textContent = progressPercent + '%';
-            const percentEl = document.getElementById('modalProgressPercent').parentElement;
-            percentEl.classList.remove('progress-highlight', 'progress-medium', 'progress-low');
-            if (progressPercent >= 70) percentEl.classList.add('progress-highlight');
-            else if (progressPercent >= 40) percentEl.classList.add('progress-medium');
-            else percentEl.classList.add('progress-low');
+            document.getElementById('modalCompletedPercent').textContent = completedPercent + '%';
+            
+            const completedPercentEl = document.getElementById('modalCompletedPercent').parentElement;
+            completedPercentEl.classList.remove('progress-highlight', 'progress-medium', 'progress-low');
+            if (completedPercent >= 70) completedPercentEl.classList.add('progress-highlight');
+            else if (completedPercent >= 40) completedPercentEl.classList.add('progress-medium');
+            else completedPercentEl.classList.add('progress-low');
 
             document.getElementById('detailInfo').innerHTML = `
                 <div class="detail-item"><span class="detail-label">Фабрика</span><span class="detail-value">${u.factory}</span></div>
